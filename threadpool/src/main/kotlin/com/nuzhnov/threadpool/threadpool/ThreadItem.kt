@@ -1,61 +1,53 @@
 package com.nuzhnov.threadpool.threadpool
 
 /**
- * Класс потока для пула потоков [ThreadPool].
+ * Класс потока для менеджера потоков [ThreadManager].
  *
- * @property pool ссылка на объект пула потоков [ThreadPool].
+ * @property manager ссылка на объект менеджера потоков [ThreadManager].
  */
-internal class ThreadItem(private var pool: ThreadPool? = null) : Thread() {
+class ThreadItem(val manager: ThreadManager) : Thread() {
 
-    internal var isRunning = false      // Запущен ли поток в данный момент
-        private set
-    private var task: Runnable? = null  // Текущая исполняемая задача данным потоком
+    /** Запущен ли поток в данный момент или он спит. */
+    var isRunning = false
+    /** Текущая задача, выполняемая потоком. */
+    var task: Task? = null
 
-
-    /**
-     * Метод засыпания потока. Поток спит, пока его не разбудит менеджер потоков (пул поток).
-     */
-    private fun sleep() {
-        while (!isRunning) {
-            // Пора баиньки...
-            sleep(SLEEP_TIME)
-        }
-    }
 
     /**
-     * Основной цикл работы потока. Работает до тех пор, пока менеджер не прервёт его,
-     * иными словами не вызовет метод interrupt.
+     * Основной цикл работы потока. Работает до тех пор, пока он не будет прерван, т.н.
+     * для него не будет вызван метод interrupt.
      */
     override fun run() {
         try {
             while (true) {
-                sleep()
-                task?.run()
-                isRunning = false
-                pool?.notify(this)
+                sleepLoop()
+                task?.run()  // Выполняем задачу, если она есть
+                task = null  // После выполнения удаляем задачу
+
+                // Если поток ранее не был остановлен:
+                if (isRunning) {
+                    task = manager.dequeueTask()
+
+                    // Если задач нет
+                    if (task == null) {
+                        // Пора спать...
+                        sleep(SLEEP_DELTA_TIME)
+                    }
+                }
             }
         } catch (_: InterruptedException) {}
     }
 
-    /**
-     * Метод для начала работы потока, вызываемый объектом [ThreadPool].
-     * Устанавливает код работы потока и пробуждает его.
-     *
-     * @param onExecute код работы потока
-     *
-     * @throws IllegalStateException если объект пула потока [pool] до этого не был установлен.
-     */
-    internal fun doWork(onExecute: Runnable) {
-        if (pool != null) {
-            this.task = onExecute
-            isRunning = true
-        } else {
-            throw IllegalStateException("thread pool isn't set to this thread")
+    /** Метод с циклом засыпания потока. Поток спит, пока его не разбудит другой поток. */
+    private fun sleepLoop() {
+        while (!isRunning) {
+            // Пора спать...
+            sleep(SLEEP_DELTA_TIME)
         }
     }
 
 
-    companion object {
-        const val SLEEP_TIME = 100L  // ms
+    private companion object {
+        const val SLEEP_DELTA_TIME = 10L
     }
 }
