@@ -1,5 +1,7 @@
 package com.nuzhnov.threadpool.app
 
+import com.nuzhnov.threadpool.app.network.currencyService
+import com.nuzhnov.threadpool.app.network.models.Response
 import com.nuzhnov.threadpool.threadpool.ThreadManager
 import com.nuzhnov.threadpool.threadpool.Task
 import com.nuzhnov.threadpool.threadpool.ThreadItem
@@ -13,8 +15,32 @@ private class CustomTask(
 }
 
 
-private val customCallback = { Thread.sleep(10L) }
-private val anotherCustomCallback = { Thread.sleep(30000L) }
+private val testCallback = { Thread.sleep(1L) }
+
+private val workCallback = {
+    try {
+        Thread.sleep(10_000)
+
+        val response = currencyService
+            .getCurrencies()
+            .execute()
+
+        when (val responseBody = response.body()) {
+            null -> println("Error: failed to get list of currencies.")
+            is Response.Success -> println("The list of currencies was successfully received.")
+
+            is Response.Failed -> {
+                println("Error: failed to get list of currencies.")
+                println("\tError code: ${responseBody.error.code}.")
+                println("\tError message: ${responseBody.error.message}.")
+            }
+
+            is Response.Unknown -> println("Error: unknown response")
+        }
+    } catch (e: Exception) {
+        println("Error: ${e.printStackTrace()}.")
+    }
+}
 
 
 private fun ThreadItem.printInfo(number: Int) {
@@ -32,7 +58,7 @@ private fun ThreadManager.printInfo() {
 
 private fun testThreadPool(taskCount: Int, threadCount: Int) {
     val manager = ThreadManager(threadCount)
-    repeat(taskCount) { manager.enqueueTask(CustomTask(customCallback)) }
+    repeat(taskCount) { manager.enqueueTask(CustomTask(testCallback)) }
 
     val before = System.currentTimeMillis()
 
@@ -54,7 +80,7 @@ private fun testManualCreatedThreads(taskCount: Int) {
     val before = System.currentTimeMillis()
 
     // Создаём для каждой задачи свой поток, запускаем их и ждём, пока они все не завершаться
-    val threads = List(taskCount) { Thread(CustomTask(callback = customCallback)).also { it.start() } }
+    val threads = List(taskCount) { Thread(CustomTask(callback = testCallback)).also { it.start() } }
     threads.forEach { it.join() }
 
     val after = System.currentTimeMillis()
@@ -111,7 +137,7 @@ private fun mainLoop() {
                 2 -> {
                     print("Введите число задач: ")
                     val number = readNaturalNumber()
-                    repeat(number) { manager.enqueueTask(CustomTask(callback = anotherCustomCallback)) }
+                    repeat(number) { manager.enqueueTask(CustomTask(callback = workCallback)) }
                 }
 
                 3 -> {
