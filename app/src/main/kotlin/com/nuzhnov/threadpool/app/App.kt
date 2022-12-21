@@ -5,6 +5,10 @@ import com.nuzhnov.threadpool.app.network.models.Response
 import com.nuzhnov.threadpool.threadpool.ThreadManager
 import com.nuzhnov.threadpool.threadpool.Task
 import com.nuzhnov.threadpool.threadpool.ThreadItem
+import java.io.File
+import java.io.PrintWriter
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 
 private class CustomTask(
@@ -15,30 +19,37 @@ private class CustomTask(
 }
 
 
+private val logFile = File("threadpool-log").also { it.createNewFile() }
+private val writer = PrintWriter(logFile)
 private val testCallback = { Thread.sleep(1L) }
 
 private val workCallback = {
+    val threadID = Thread.currentThread().id
+
     try {
         Thread.sleep(10_000)
 
         val response = currencyService
             .getCurrencies()
             .execute()
+        val time = LocalTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME)
 
         when (val responseBody = response.body()) {
-            null -> println("Error: failed to get list of currencies.")
-            is Response.Success -> println("The list of currencies was successfully received.")
+            null -> writer.println("Поток №$threadID: ошибка получения списка валют. ($time)")
+
+            is Response.Success -> writer.println("Поток №$threadID: cписок валют получен успешно. ($time)")
 
             is Response.Failed -> {
-                println("Error: failed to get list of currencies.")
-                println("\tError code: ${responseBody.error.code}.")
-                println("\tError message: ${responseBody.error.message}.")
+                writer.println("Поток №$threadID: ошибка получения списка валют. ($time)")
+                writer.println("\tКод ошибки: ${responseBody.error.code}.")
+                writer.println("\tСообщение: ${responseBody.error.message}.")
             }
 
-            is Response.Unknown -> println("Error: unknown response")
+            is Response.Unknown -> writer.println("Поток №$threadID: неизвестный ответ сервера. ($time)")
         }
     } catch (e: Exception) {
-        println("Error: ${e.printStackTrace()}.")
+        val time = LocalTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME)
+        writer.println("Поток №$threadID: ${e.localizedMessage}. ($time)")
     }
 }
 

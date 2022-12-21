@@ -1,11 +1,9 @@
 plugins {
-    // Apply the org.jetbrains.kotlin.jvm Plugin to add support for Kotlin.
-    id("org.jetbrains.kotlin.jvm")
+    kotlin("jvm")
     kotlin("kapt")
 }
 
 repositories {
-    // Use Maven Central for resolving dependencies.
     mavenCentral()
 }
 
@@ -16,9 +14,30 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     // Align versions of all Kotlin components
     implementation(platform("org.jetbrains.kotlin:kotlin-bom"))
+}
 
-    // Use JUnit Jupiter for testing.
-    testImplementation("org.junit.jupiter:junit-jupiter:5.8.1")
+tasks.compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+        languageVersion = "1.5"
+    }
+}
+
+tasks.compileTestKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+        languageVersion = "1.5"
+    }
+}
+
+tasks.compileJava {
+    targetCompatibility = "1.8"
+    sourceCompatibility = "1.8"
+}
+
+tasks.compileTestJava {
+    targetCompatibility = "1.8"
+    sourceCompatibility = "1.8"
 }
 
 tasks.named<Test>("test") {
