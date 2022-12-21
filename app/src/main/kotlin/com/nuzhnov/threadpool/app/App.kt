@@ -51,6 +51,8 @@ private val workCallback = {
         val time = LocalTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME)
         writer.println("Поток №$threadID: ${e.localizedMessage}. ($time)")
     }
+
+    writer.flush()
 }
 
 
@@ -116,8 +118,7 @@ private fun printMenu() {
     println("\t9: Запустить все потоки.")
     println("\t10: Остановить отдельный поток.")
     println("\t11: Остановить все потоки.")
-    println("\t12: Сравнительное выполнение задач.")
-    println("\t13: Выйти из программы.")
+    println("\t12: Выйти из программы.")
     println("-".repeat(100))
 }
 
@@ -211,20 +212,9 @@ private fun mainLoop() {
                 11 -> manager.threadList.forEach { thread -> thread.isRunning = false }
 
                 12 -> {
-                    print("Введите число задач: ")
-                    val taskCount = readNaturalNumber()
-                    print("Введите число потоков: ")
-                    val threadCount = readNaturalNumber()
-
-                    println("Начинаю сравнительное тестирование...")
-                    testThreadPool(taskCount, threadCount)
-                    testManualCreatedThreads(taskCount)
-                    println("Сравнительное тестирование закончено")
-                }
-
-                13 -> {
                     manager.clearThreads()
                     println("Завершаю выполнение программы...")
+                    break
                 }
 
                 else -> println("Ошибка: неверный пункт меню.")
@@ -263,4 +253,5 @@ fun main() {
     println("-".repeat(100))
 
     mainLoop()
+    writer.close()
 }
